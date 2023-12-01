@@ -9,6 +9,23 @@
 
 void print_sudoku( const int *puzzle)
 {
+    for ( int i = 0; i < N * N; i += 1)
+    {
+        if ( puzzle[ i] == 0)
+        {
+            printf(".");
+        }// if
+        else
+        {
+            printf("%d", puzzle[ i]);
+        }// else
+    }// for i
+    
+    return;
+}
+
+void pretty_print_sudoku( const int *puzzle)
+{
     int cntx = 0, cnty = 0;
     for ( int i = 0; i < N; i += 1)
     {
@@ -46,16 +63,18 @@ void print_sudoku( const int *puzzle)
     return;
 }
 
-void input( int *buffer)
+bool input( int *buffer)
 {
     char *input = NULL;
     size_t len = 0;
+    bool success = true;
 
     do
     {
         if ( getline( &input, &len, stdin) == -1)
         {
             printf("getline error\n");
+            success = false;
             break;
         }// if
         
@@ -78,14 +97,19 @@ void input( int *buffer)
                 {
                     // repeat again
                     printf("error input character [%c]\n", input[ i]);
+                    success = false;
                 }// else
             }// for i
+        }// if
+        if ( !success)
+        {
+            break;
         }// if
     } while ( input[ 0] == '#');
 
     free( input);
     input = NULL;
-    return;
+    return success;
 }
 
 bool is_valid( const int *puzzle)
@@ -98,9 +122,9 @@ bool is_valid( const int *puzzle)
         {
             if ( puzzle[ i * N + j] != 0)
             {
-                row[ i][ puzzle[ i * N + j]] += 1;
-                col[ j][ puzzle[ i * N + j]] += 1;
-                block[ i / SUB_N * SUB_N + j / SUB_N][ puzzle[ i * N + j]] += 1;
+                row[ i][ puzzle[ i * N + j] - 1] += 1;
+                col[ j][ puzzle[ i * N + j] - 1] += 1;
+                block[ (i / SUB_N) * SUB_N + j / SUB_N][ puzzle[ i * N + j] - 1] += 1;
             }// if
         }// for j
     }// for i
@@ -127,9 +151,6 @@ bool solve( const int *puzzle, int *solution)
         return false;
     }// if
 
-    int temp_sol[ N * N];
-    memcpy( temp_sol, puzzle, sizeof( int) * N * N);
-
     // find first empty
     int target = -1;
     for ( int i = 0; i < N * N; i += 1)
@@ -147,6 +168,9 @@ bool solve( const int *puzzle, int *solution)
         return true;
     }// if
     
+    int temp_sol[ N * N];
+    memcpy( temp_sol, puzzle, sizeof( int) * N * N);
+
     // guess all possible numbers
     for ( int i = 0; i < N; i += 1)
     {
@@ -161,26 +185,30 @@ bool solve( const int *puzzle, int *solution)
     return false;
 }
 
-
 int main( void)
 {
     int *puzzle = malloc( sizeof( int) * N * N);
     int *sol = malloc( sizeof( int) * N * N);
 
     // get 1 puzzle and solve
-    input( puzzle);
-    print_sudoku( puzzle);
-    bool solution = solve( puzzle, sol);
-    if ( solution)
+    while ( input( puzzle))
     {
-        // solved
-        printf("solution found\n");
-        print_sudoku( sol);
-    }// if
-    else
-    {
-        printf("no answer\n");
-    }// else
+        bool solution = solve( puzzle, sol);
+        if ( solution)
+        {
+            // solved
+            // printf("solution found\n");
+            // pretty_print_sudoku( sol);
+            print_sudoku( puzzle);
+            printf(":1:");
+            print_sudoku( sol);
+            printf("\n");
+        }// if
+        else
+        {
+            printf("no answer\n");
+        }// else
+    }// while
 
     free( puzzle);
     puzzle = NULL;
