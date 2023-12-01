@@ -7,14 +7,6 @@
 #define N 9
 #define SUB_N 3
 
-struct sSudoku
-{
-    int puzzle[ N * N];
-    int candidate[ N * N][ N]; // possibility of all positions
-    int position_left;
-};
-
-
 void print_sudoku( const int *puzzle)
 {
     int cntx = 0, cnty = 0;
@@ -69,7 +61,7 @@ void input( int *buffer)
         
         len = strlen( input);
         // printf("%s] %ld\n", input, len);
-        if ( len == N * N + 1)
+        if ( input[ 0] != '#')
         {
             // the line we want
             for ( int i = 0; i < N * N; i += 1)
@@ -84,127 +76,116 @@ void input( int *buffer)
                 }// else if
                 else
                 {
+                    // repeat again
                     printf("error input character [%c]\n", input[ i]);
                 }// else
             }// for i
         }// if
-    } while ( len != N * N + 1);
+    } while ( input[ 0] == '#');
 
     free( input);
     input = NULL;
     return;
 }
 
-void print_candidate( const int candidate[ N * N][N])
+bool is_valid( const int *puzzle)
 {
-    for ( int i = 0; i < N * N; i += 1)
+    int row[ N][ N] = { 0}, col[ N][ N] = { 0}, block[ N][ N] = { 0};
+
+    for ( int i = 0; i < N; i += 1)
     {
-        printf("%d:", i);
         for ( int j = 0; j < N; j += 1)
         {
-            if ( candidate[ i][ j])
+            if ( puzzle[ i * N + j] != 0)
             {
-                printf(" %d", j + 1);
+                row[ i][ puzzle[ i * N + j]] += 1;
+                col[ j][ puzzle[ i * N + j]] += 1;
+                block[ i / SUB_N * SUB_N + j / SUB_N][ puzzle[ i * N + j]] += 1;
             }// if
         }// for j
-        printf("\n");
     }// for i
-    
-    return;
+
+    // check duplicate
+    for ( int i = 0; i < N; i += 1)
+    {
+        for ( int j = 0; j < N; j += 1)
+        {
+            if ( row[ i][ j] > 1 || col[ i][ j] > 1 || block[ i][ j] > 1)
+            {
+                return false;
+            }// if
+        }// for j
+    }// for i
+
+    return true;
 }
 
-void update_candidate( struct sSudoku *sudoku)
+bool solve( const int *puzzle, int *solution)
 {
-    sudoku->position_left = 0;
+    if ( !is_valid( puzzle))
+    {
+        return false;
+    }// if
+
+    int temp_sol[ N * N];
+    memcpy( temp_sol, puzzle, sizeof( int) * N * N);
+
+    // find first empty
+    int target = -1;
     for ( int i = 0; i < N * N; i += 1)
     {
-        // for every point not figured out
-        if ( sudoku->puzzle[ i] == 0)
+        if ( puzzle[ i] == 0)
         {
-            sudoku->position_left += 1;
-            // add all
-            for ( int j = 0; j < N; j += 1)
-            {
-                sudoku->candidate[ i][ j] = 1;
-            }// for j
-            
-            int start = ( i / N) * N;
-            // printf("%d start %d\n", i, start);
-            // check row
-            for ( int j = start; j < start + N; j += 1)
-            {
-                if ( sudoku->puzzle[ j] == 0)
-                {
-                    continue;
-                }// if
-                // remove from candicate
-                sudoku->candidate[ i][ sudoku->puzzle[ j] - 1] = 0;
-            }// for j
-            
-            start = i % N;
-            // check col
-            for ( int j = 0; j < N; j += 1)
-            {
-                if ( sudoku->puzzle[ start + j * N] == 0)
-                {
-                    continue;
-                }// if
-                // remove from candicate
-                sudoku->candidate[ i][ sudoku->puzzle[ start + j * N] - 1] = 0;
-            }// for j
-
-            // check block
-            start = i / ( N * N) * ( N * N);
-            for ( int row = 0; row < SUB_N; row += 1)
-            {
-                for ( int col = 0; col < SUB_N; col += 1)
-                {
-                    if ( sudoku->puzzle[ start + row * N + col] == 0)
-                    {
-                        continue;
-                    }// if
-                    // remove from candicate
-                    sudoku->candidate[ i][ sudoku->puzzle[ start + row * N + col] - 1] = 0;
-                }// for col
-            }// for row
+            target = i;
         }// if
     }// for i
-    
-    return;
-}
 
-bool solve( struct sSudoku *sudoku)
-{
-    update_candidate( sudoku);
-    // print_candidate( sudoku->candidate);
-    // printf("position left %d\n", sudoku->position_left);
-
-    if ( sudoku->position_left == 0)
+    // no empty spaces => solved
+    if ( target == -1)
     {
+        memcpy( solution, puzzle, sizeof( int) * N * N);
         return true;
     }// if
     
+    // guess all possible numbers
+    for ( int i = 0; i < N; i += 1)
+    {
+        temp_sol[ target] = i + 1;
+        // printf("guess %d\n", i);
+        if ( solve( temp_sol, solution))
+        {
+            return true;
+        }// if
+    }// for i
     
     return false;
 }
 
-int main()
+
+int main( void)
 {
-    struct sSudoku sudoku = { 0};
+    int *puzzle = malloc( sizeof( int) * N * N);
+    int *sol = malloc( sizeof( int) * N * N);
 
     // get 1 puzzle and solve
-    input( sudoku.puzzle);
-    print_sudoku( sudoku.puzzle);
-    bool solution = solve( &sudoku);
+    input( puzzle);
+    print_sudoku( puzzle);
+    bool solution = solve( puzzle, sol);
     if ( solution)
     {
         // solved
-        print_sudoku( sudoku.puzzle);
+        printf("solution found\n");
+        print_sudoku( sol);
     }// if
     else
     {
         printf("no answer\n");
     }// else
+
+    free( puzzle);
+    puzzle = NULL;
+    free( sol);
+    sol = NULL;
 
     return 0;
 }
