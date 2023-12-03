@@ -41,13 +41,13 @@ Sudoku<T>::Sudoku(string str){
             int val = s[idx] - '1';
             int r = idx / T;
             int c = idx % T;
-            cout<<idx<<" "<<r<<" "<<c<<" "<<val<<" "<<r * T + val<<" "<<c * T + val<<endl;
+            // cout<<idx<<" "<<r<<" "<<c<<" "<<val<<" "<<r * T + val<<" "<<c * T + val<<endl;
             row.set(r * T + val);
             col.set(c * T + val);
             int block_size = sqrt(T);
             r = idx / T / block_size;
             c = idx % T / block_size;
-            cout<<idx<<" "<<r<<" "<<c<<" "<<val<<" "<<r * block_size * T + c * T + val<<endl;
+            // cout<<idx<<" "<<r<<" "<<c<<" "<<val<<" "<<r * block_size * T + c * T + val<<endl;
             block.set(r * block_size * T + c * T + val);
         }
     }
@@ -136,8 +136,8 @@ string Sudoku<T>::asSudoku(){
     int block_size = sqrt(T);
     for(int i = 0; i < T; ++i){
         if(i && i % block_size == 0){
-            for(int k = 0; k < T * 2 - 1 + block_size - 1; ++k){
-                ret += "--";
+            for(int k = 0; k < T * 2 - 1 + 2 * block_size - 2; ++k){
+                ret += "-";
             }
             ret += "\n";
         }
@@ -158,7 +158,9 @@ bool Sudoku<T>::solve(){
     stack<Sudoku> st;
     st.push((*this));
     string str = "";
+    // int cnt = 0;
     while(!st.empty()){
+        // ++cnt;
         // cout<<"st size: "<<st.size()<<endl;
         // lock
         Sudoku now = st.top();
@@ -172,6 +174,7 @@ bool Sudoku<T>::solve(){
             // 不確定可不可以break或return所以我把改值放到最後面了
             // 必須要break不然會跑太久;
             (*this) = now;
+            // cout<<"cnt: "<<cnt<<endl;
             return true;
         }
         vector<Sudoku> next;

@@ -7,6 +7,7 @@ using namespace std;
 int main(){
     fstream file;
     file.open("data/input_example", ios::in);
+    // file.open("data/puzzle2_17_clue", ios::in);
     string str;
     while(getline(file, str)){
         Sudoku<9> question(str.substr(0, 81));
