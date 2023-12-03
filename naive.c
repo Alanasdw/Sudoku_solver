@@ -7,6 +7,8 @@
 #define N 9
 #define SUB_N 3
 
+FILE *f_in = NULL;
+
 void print_sudoku( const int *puzzle)
 {
     for ( int i = 0; i < N * N; i += 1)
@@ -71,9 +73,13 @@ bool input( int *buffer)
 
     do
     {
-        if ( getline( &input, &len, stdin) == -1)
+        // if ( getline( &input, &len, stdin) == -1)
+        if ( getline( &input, &len, f_in) == -1)
         {
-            printf("getline error\n");
+            if ( !feof( f_in))
+            {
+                printf("getline error\n");
+            }// if
             success = false;
             break;
         }// if
@@ -190,6 +196,8 @@ int main( void)
     int *puzzle = malloc( sizeof( int) * N * N);
     int *sol = malloc( sizeof( int) * N * N);
 
+    f_in = fopen("data/input_example", "r");
+
     // get 1 puzzle and solve
     while ( input( puzzle))
     {
@@ -198,7 +206,7 @@ int main( void)
         {
             // solved
             // printf("solution found\n");
-            // pretty_print_sudoku( sol);
+            pretty_print_sudoku( sol);
             print_sudoku( puzzle);
             printf(":1:");
             print_sudoku( sol);
@@ -209,6 +217,9 @@ int main( void)
             printf("no answer\n");
         }// else
     }// while
+
+    fclose( f_in);
+    f_in = NULL;
 
     free( puzzle);
     puzzle = NULL;
