@@ -222,14 +222,12 @@ bool solve( int *solution)
     int answer = false;
     int puzzle[ N * N];
 
+    int candidates[ N * N * N];
+    int valids;
+
     while ( stack_len != 0)
     {   
         pop_stack( puzzle);
-
-        if ( !is_valid( puzzle))
-        {
-            continue;
-        }// if
 
         // find first empty
         int target = -1;
@@ -249,12 +247,23 @@ bool solve( int *solution)
             break;
         }// if
 
+        valids = 0;
+
         // guess all possible numbers
         for ( int i = 0; i < N; i += 1)
         {
             puzzle[ target] = i + 1;
             // printf("guess %d\n", i);
-            push_stack( puzzle);
+            if ( is_valid( puzzle))
+            {
+                memcpy( candidates + valids * N * N, puzzle, sizeof( int) * N * N);
+                valids += 1;
+            }// if
+        }// for i
+
+        for ( int i = 0; i < valids; i += 1)
+        {
+            push_stack( candidates + i * N * N);
         }// for i
     }// while
 
@@ -267,8 +276,8 @@ int main( void)
     int *sol = malloc( sizeof( int) * N * N);
 
 
-    // f_in = fopen("data/input_example", "r");
-    f_in = fopen("data/puzzle2_17_clue", "r");
+    f_in = fopen("data/input_example", "r");
+    // f_in = fopen("data/puzzle2_17_clue", "r");
 
     // get 1 puzzle and solve
     while ( input( puzzle))
