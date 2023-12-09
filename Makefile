@@ -1,7 +1,7 @@
 .PHONY: all clean
 
 CC = gcc
-CFLAGS = -Wall -g -O3 -march=native
+CFLAGS = -Wall -g -O3 -march=native -lpthread
 
 SOURCE = naive.c naive_stack.c
 TARGET = $(SOURCE:.c=)

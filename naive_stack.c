@@ -3,14 +3,26 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>    // for bool
+#include <pthread.h>    // for multi threading
 
 #define N 9
 #define SUB_N 3
 #define STACK_MAX 100000000 /* 10**8 */
+#define THREAD_COUNT 4
 
 int *stack_base;
 int stack_len;
 int max_used = 0;
+int thread_compute;
+
+bool has_answer;
+bool end;
+int *solution;
+
+// mutex for solution and stack
+pthread_mutex_t mux;
+// pthread_mutex_t mux_stack;
+pthread_cond_t cv_mux;
 
 FILE *f_in = NULL;
 
@@ -217,17 +229,38 @@ bool is_valid( const int *puzzle)
     return true;
 }
 
-bool solve( int *solution)
+void *solve( void *data)
 {
-    int answer = false;
+    // int thread_num = *(int *)data;
+
     int puzzle[ N * N];
 
     int candidates[ N * N * N];
     int valids;
 
-    while ( stack_len != 0)
-    {   
+    while ( 1)
+    {
+        pthread_mutex_lock( &mux);
+        while ( stack_len == 0 && thread_compute >= 0)
+        {
+            if ( end)
+            {
+                break;
+            }// if
+            pthread_cond_wait( &cv_mux, &mux);
+        }// while
+        if ( end)
+        {
+            pthread_cond_signal( &cv_mux);
+            pthread_mutex_unlock( &mux);
+            break;
+        }// if
+        
         pop_stack( puzzle);
+        thread_compute += 1;
+        // printf("in compute %d\n", thread_compute);
+        pthread_cond_signal( &cv_mux);
+        pthread_mutex_unlock( &mux);
 
         // find first empty
         int target = -1;
@@ -242,8 +275,12 @@ bool solve( int *solution)
         // no empty spaces => solved
         if ( target == -1)
         {
+            pthread_mutex_lock( &mux);
             memcpy( solution, puzzle, sizeof( int) * N * N);
-            answer = true;
+            end = true;
+            has_answer = true;
+            pthread_cond_signal( &cv_mux);
+            pthread_mutex_unlock( &mux);
             break;
         }// if
 
@@ -261,32 +298,66 @@ bool solve( int *solution)
             }// if
         }// for i
 
+        pthread_mutex_lock( &mux);
         for ( int i = 0; i < valids; i += 1)
         {
             push_stack( candidates + i * N * N);
         }// for i
+        thread_compute -= 1;
+        pthread_cond_signal( &cv_mux);
+        pthread_mutex_unlock( &mux);
     }// while
 
-    return answer;
+    pthread_exit( NULL);
 }
 
 int main( void)
 {
     int *puzzle = malloc( sizeof( int) * N * N);
     int *sol = malloc( sizeof( int) * N * N);
-
+    solution = sol;
 
     f_in = fopen("data/input_example", "r");
     // f_in = fopen("data/puzzle2_17_clue", "r");
 
+    bool error = false;
+
     // get 1 puzzle and solve
     while ( input( puzzle))
     {
+        pthread_t threads[ THREAD_COUNT];
+        pthread_mutex_init( &mux, NULL);
+        // pthread_mutex_init( &mux_stack, NULL);
+        pthread_cond_init( &cv_mux, NULL);
         init_stack();
 
         push_stack( puzzle);
-        bool solution = solve( sol);
-        if ( solution)
+
+        has_answer = false;
+        end = false;
+        // spawn threads
+        for ( int i = 0; i < THREAD_COUNT; i += 1)
+        {
+            thread_compute = 0;
+            if ( pthread_create( &threads[ i], NULL, solve, NULL))
+            {
+                printf("pthread create error\n");
+                error = true;
+            }// if
+        }// for i
+
+        if ( error)
+        {
+            break;
+        }// if
+
+        // join threads
+        for ( int i = 0; i < THREAD_COUNT; i += 1)
+        {
+            pthread_join( threads[ i], NULL);
+        }// for i
+
+        if ( has_answer)
         {
             // solved
             // printf("solution found\n");
@@ -301,7 +372,11 @@ int main( void)
             printf("no answer\n");
         }// else
 
+        pthread_cond_destroy( &cv_mux);
+        pthread_mutex_destroy( &mux);
+        // pthread_mutex_destroy( &mux_stack);
         free_stack();
+        // break;
     }// while
 
     printf("max stack used: %d\n", max_used);
