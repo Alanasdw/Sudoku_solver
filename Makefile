@@ -3,12 +3,12 @@
 CC = gcc
 CFLAGS = -Wall -g -O3 -march=native
 
-SOURCE = naive.c
+SOURCE = naive.c naive_stack.c
 TARGET = $(SOURCE:.c=)
 
 all: $(TARGET)
 
-$(TARGET): $(SOURCE)
+$(TARGET) : % : %.c
 	$(CC) $(CFLAGS) -o $@ $^
 
 clean:
