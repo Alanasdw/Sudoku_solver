@@ -6,6 +6,11 @@
 
 #define N 9
 #define SUB_N 3
+#define STACK_MAX 100000000 /* 10**8 */
+
+int *stack_base;
+int stack_len;
+int max_used = 0;
 
 FILE *f_in = NULL;
 
@@ -118,6 +123,68 @@ bool input( int *buffer)
     return success;
 }
 
+void init_stack( void)
+{
+    // stack stores the full puzzle
+    stack_base = malloc( sizeof(int) * N * N * STACK_MAX);
+    stack_len = 0;
+    return;
+}
+
+void free_stack( void)
+{
+    free( stack_base);
+    stack_base = NULL;
+    stack_len = 0;
+    return;
+}
+
+int push_stack( const int* puzzle)
+{
+    if ( stack_len == STACK_MAX)
+    {
+        // stack full
+        printf("stack full error %d\n", stack_len);
+        return 1;
+    }// if
+
+    max_used = max_used > stack_len? max_used: stack_len;    
+
+    memcpy( stack_base + stack_len * N * N, puzzle, sizeof( int) * N * N);
+    stack_len += 1;
+    
+    return 0;
+}
+
+int pop_stack( int *puzzle)
+{
+    if ( stack_len == 0)
+    {
+        // stack full
+        printf("stack empty error %d\n", stack_len);
+        return 1;
+    }// if
+
+    stack_len -= 1;
+    memcpy( puzzle, stack_base + stack_len * N * N, sizeof( int) * N * N);
+    return 0;
+}
+
+void print_stack( void)
+{
+    for ( int i = 0; i < stack_len; i += 1)
+    {
+        printf("[");
+        for ( int j = 0; j < N * N; j += 1)
+        {
+            printf("%d", stack_base[ i * N * N + j]);
+        }// for j
+        printf("]\n");
+    }// for i
+    
+    return;
+}
+
 bool is_valid( const int *puzzle)
 {
     int row[ N][ N] = { 0}, col[ N][ N] = { 0}, block[ N][ N] = { 0};
@@ -150,45 +217,48 @@ bool is_valid( const int *puzzle)
     return true;
 }
 
-bool solve( const int *puzzle, int *solution)
+bool solve( int *solution)
 {
-    if ( !is_valid( puzzle))
-    {
-        return false;
-    }// if
+    int answer = false;
+    int puzzle[ N * N];
 
-    // find first empty
-    int target = -1;
-    for ( int i = 0; i < N * N; i += 1)
-    {
-        if ( puzzle[ i] == 0)
+    while ( stack_len != 0)
+    {   
+        pop_stack( puzzle);
+
+        if ( !is_valid( puzzle))
         {
-            target = i;
+            continue;
         }// if
-    }// for i
 
-    // no empty spaces => solved
-    if ( target == -1)
-    {
-        memcpy( solution, puzzle, sizeof( int) * N * N);
-        return true;
-    }// if
-    
-    int temp_sol[ N * N];
-    memcpy( temp_sol, puzzle, sizeof( int) * N * N);
-
-    // guess all possible numbers
-    for ( int i = 0; i < N; i += 1)
-    {
-        temp_sol[ target] = i + 1;
-        // printf("guess %d\n", i);
-        if ( solve( temp_sol, solution))
+        // find first empty
+        int target = -1;
+        for ( int i = 0; i < N * N; i += 1)
         {
-            return true;
+            if ( puzzle[ i] == 0)
+            {
+                target = i;
+            }// if
+        }// for i
+
+        // no empty spaces => solved
+        if ( target == -1)
+        {
+            memcpy( solution, puzzle, sizeof( int) * N * N);
+            answer = true;
+            break;
         }// if
-    }// for i
-    
-    return false;
+
+        // guess all possible numbers
+        for ( int i = 0; i < N; i += 1)
+        {
+            puzzle[ target] = i + 1;
+            // printf("guess %d\n", i);
+            push_stack( puzzle);
+        }// for i
+    }// while
+
+    return answer;
 }
 
 int main( void)
@@ -196,17 +266,22 @@ int main( void)
     int *puzzle = malloc( sizeof( int) * N * N);
     int *sol = malloc( sizeof( int) * N * N);
 
-    f_in = fopen("data/input_example", "r");
+
+    // f_in = fopen("data/input_example", "r");
+    f_in = fopen("data/puzzle2_17_clue", "r");
 
     // get 1 puzzle and solve
     while ( input( puzzle))
     {
-        bool solution = solve( puzzle, sol);
+        init_stack();
+
+        push_stack( puzzle);
+        bool solution = solve( sol);
         if ( solution)
         {
             // solved
             // printf("solution found\n");
-            pretty_print_sudoku( sol);
+            // pretty_print_sudoku( sol);
             print_sudoku( puzzle);
             printf(":1:");
             print_sudoku( sol);
@@ -216,7 +291,11 @@ int main( void)
         {
             printf("no answer\n");
         }// else
+
+        free_stack();
     }// while
+
+    printf("max stack used: %d\n", max_used);
 
     fclose( f_in);
     f_in = NULL;
