@@ -241,7 +241,7 @@ void *solve( void *data)
     while ( 1)
     {
         pthread_mutex_lock( &mux);
-        while ( stack_len == 0 && thread_compute >= 0)
+        while ( stack_len == 0 && ( stack_len == 0 || thread_compute == 0))
         {
             if ( end)
             {
@@ -319,6 +319,7 @@ int main( void)
 
     f_in = fopen("data/input_example", "r");
     // f_in = fopen("data/puzzle2_17_clue", "r");
+    // f_in = fopen("data/puzzle0_kaggle", "r");
 
     bool error = false;
 

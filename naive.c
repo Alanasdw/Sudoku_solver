@@ -197,6 +197,7 @@ int main( void)
     int *sol = malloc( sizeof( int) * N * N);
 
     f_in = fopen("data/input_example", "r");
+    // f_in = fopen("data/puzzle0_kaggle", "r");
 
     // get 1 puzzle and solve
     while ( input( puzzle))
@@ -206,7 +207,7 @@ int main( void)
         {
             // solved
             // printf("solution found\n");
-            pretty_print_sudoku( sol);
+            // pretty_print_sudoku( sol);
             print_sudoku( puzzle);
             printf(":1:");
             print_sudoku( sol);
