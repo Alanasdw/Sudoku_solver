@@ -2,3 +2,6 @@
 naive
 output
 naive_stack
+.vscode
+structured_stack
+perf.*
