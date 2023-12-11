@@ -10,7 +10,7 @@ class Sudoku{
 public:
     Sudoku(std::string str);
     // point 0 based
-    bool checkValid(int idx, int val);
+    static bool checkValid(const Sudoku& target) const;
     // first empty cell
     int firstEmpty();
     // -1 = empty, return true = modify successfully
@@ -53,38 +53,33 @@ Sudoku<T>::Sudoku(string str){
     }
 }
 // // full puzzle
-// bool checkValid(){
-//     if(std::any_of(row.begin(), row.end(), [](int k){return k > 1}) != row.end())
-//         return false;
-//     if(std::any_of(col.begin(), col.end(), [](int k){return k > 1}) != col.end())
-//         return false;
-//     if(std::any_of(block.begin(), block.end(), [](int k){return k > 1}) != block.end())
-//         return false;
-//     return 
-// }
-// point 0 based
 template<int T>
-bool Sudoku<T>::checkValid(int idx, int val){
-    // for(int i = 0; i )
-    // return checkValid();
-    int r = idx / T;
-    int c = idx % T;
-    // cout<<r<<" "<<c<<" "<<val<<endl;
-    if(row.test(r * T + val)){
-        return false;
-    }
-    if(col.test(c * T + val)){
-        return false;
-    }
-    int block_size = sqrt(T);
-    r = idx / T / block_size;
-    c = idx % T / block_size;
-    // cout<<r<<" "<<c<<" "<<block_size<<" "<<val<<endl;
-    if(block.test(r * block_size * T + c * T + val)){
-        return false;
-    }
-    return true;
+bool Sudoku<T>::checkValid(const Sudoku& target) const {
+
 }
+// point 0 based
+// template<int T>
+// bool Sudoku<T>::checkValid(int idx, int val){
+//     // for(int i = 0; i )
+//     // return checkValid();
+//     int r = idx / T;
+//     int c = idx % T;
+//     // cout<<r<<" "<<c<<" "<<val<<endl;
+//     if(row.test(r * T + val)){
+//         return false;
+//     }
+//     if(col.test(c * T + val)){
+//         return false;
+//     }
+//     int block_size = sqrt(T);
+//     r = idx / T / block_size;
+//     c = idx % T / block_size;
+//     // cout<<r<<" "<<c<<" "<<block_size<<" "<<val<<endl;
+//     if(block.test(r * block_size * T + c * T + val)){
+//         return false;
+//     }
+//     return true;
+// }
 template<int T>
 int Sudoku<T>::firstEmpty(){
     for(int i = 0; i < s.size(); ++i){
