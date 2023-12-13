@@ -26,6 +26,7 @@ typedef struct _sSudoku_stack
 
 sSudoku_stack global_stack;
 FILE *f_in;
+int guess;
 
 inline int set( int number, int offset)
 {
@@ -83,10 +84,10 @@ bool input( sSudoku *puzzle)
                         puzzle->col[ j] = set( puzzle->col[ j], target - '1');
                         puzzle->block[ i / SUB_N * SUB_N + j / SUB_N] = set( puzzle->block[ i / SUB_N * SUB_N + j / SUB_N], target - '1');
                     }// else if
-                    else if ( input[ i] != '.')
+                    else if ( target != '.')
                     {
                         // repeat again
-                        printf("error input character [%c]\n", input[ i]);
+                        printf("error input character [%c]\n", target);
                         success = false;
                     }// else
                 }// for j
@@ -194,7 +195,7 @@ int push_stack( sSudoku_stack *stack, const sSudoku *puzzle)
         return 1;
     }// if
 
-    // max_used = max_used > stack_len? max_used: stack_len;    
+    // max_used = max_used > stack_len? max_used: stack_len;
 
     memcpy( stack -> base + stack -> len, puzzle, sizeof(sSudoku));
     stack -> len += 1;
@@ -272,16 +273,29 @@ bool solve( sSudoku puzzle, sSudoku *sol)
 
         int16_t candidate;
         int empty_pos = -1;
+        int possibles = 10;
+        int16_t temp;
         // find empty
         for ( int i = 0; i < N * N; i += 1)
         {
             if ( local_puzzle.puzzle[ i] == '.')
             {
-                empty_pos = i;
-                break;
+                temp = __builtin_popcount( valids( local_puzzle, i) & 0x01ff);
+                // printf("temp %d\n", temp);
+                // printf("valids %X\n", valids( local_puzzle, i));
+                if ( possibles > temp)
+                {
+                    // a better choice
+                    possibles = temp;
+                    empty_pos = i;
+                }// if
+                
+                // possibles = __builtin_popcount( valids( local_puzzle, i));
+                // empty_pos = i;
+                // break;
             }// if
         }// for i
-        
+
         // no empty spots
         if ( empty_pos == -1)
         {
@@ -289,6 +303,7 @@ bool solve( sSudoku puzzle, sSudoku *sol)
             memcpy( sol, &local_puzzle, sizeof(sSudoku));
             break;
         }// if
+        // printf("poss %d\n", possibles);
 
         candidate = valids( local_puzzle, empty_pos);
         cand_len = 0;
@@ -313,6 +328,7 @@ bool solve( sSudoku puzzle, sSudoku *sol)
         {
             push_stack( &global_stack, &local_candidates[ i]);
         }// for i
+        guess += cand_len;
     }// while
     
     return has_answer;
@@ -320,13 +336,16 @@ bool solve( sSudoku puzzle, sSudoku *sol)
 
 int main( void)
 {
-    f_in = fopen("data/input_example", "r");
+    // f_in = fopen("data/input_example", "r");
+    // f_in = fopen("data/ans2_17_clue", "r");
+    f_in = fopen("data/ans0_kaggle", "r");
 
     sSudoku puzzle;
     sSudoku sol;
 
     while ( input( &puzzle))
     {
+        guess = 0;
         init_stack( &global_stack);
         push_stack( &global_stack, &puzzle);
 
@@ -337,6 +356,7 @@ int main( void)
             printf(":1:");
             print_sudoku( sol);
             printf("\n");
+            printf("Total guesses: %d\n", guess);
         }// if
         else
         {
@@ -344,6 +364,7 @@ int main( void)
         }// else
 
         free_stack( &global_stack);
+        // break;
     }// while
 
     // cleanup
