@@ -7,17 +7,24 @@
 
 #define N 9
 #define SUB_N 3
-#define STACK_MAX 100000000 /* 10**8 */
+#define STACK_MAX 100000 /* 10**5 */
 #define THREAD_COUNT 4
 
 typedef struct _sSudoku
 {
     char puzzle[ N * N + 1];
-    int row[ N];
-    int col[ N];
-    int block[ N];
+    int16_t row[ N];
+    int16_t col[ N];
+    int16_t block[ N];
 }sSudoku;
 
+typedef struct _sSudoku_stack
+{
+    int len;
+    sSudoku *base;
+} sSudoku_stack;
+
+sSudoku_stack global_stack;
 FILE *f_in;
 
 inline int set( int number, int offset)
@@ -84,23 +91,6 @@ bool input( sSudoku *puzzle)
                     }// else
                 }// for j
             }// for i
-            
-
-            // for ( int i = 0; i < N * N; i += 1)
-            // {
-            //     if ( input[ i] >= '0' && input[ i] <= '9')
-            //     {
-            //         puzzle->row[ i] = set( puzzle->row[ i], input[ i] - '0');
-            //         puzzle->col[ i] = set( puzzle->row[ i], input[ i] - '0');
-            //         puzzle->block[ i] = set( puzzle->row[ i], input[ i] - '0');
-            //     }// else if
-            //     else if ( input[ i] != '.')
-            //     {
-            //         // repeat again
-            //         printf("error input character [%c]\n", input[ i]);
-            //         success = false;
-            //     }// else
-            // }// for i
         }// if
         if ( !success)
         {
@@ -115,27 +105,27 @@ bool input( sSudoku *puzzle)
 
 void print_sudoku( const sSudoku puzzle)
 {
-    printf("%s\n", puzzle.puzzle);
+    printf("%s", puzzle.puzzle);
     // printf("%s",);
 
-    printf("row: ");
-    for ( int i = 0; i < N; i += 1)
-    {
-        printf("%d ", puzzle.row[ i]);
-    }// for i
-    printf("\n");
-    printf("col: ");
-    for ( int i = 0; i < N; i += 1)
-    {
-        printf("%d ", puzzle.col[ i]);
-    }// for i
-    printf("\n");
-    printf("block: ");
-    for ( int i = 0; i < N; i += 1)
-    {
-        printf("%d ", puzzle.block[ i]);
-    }// for i
-    printf("\n");
+    // printf("row: ");
+    // for ( int i = 0; i < N; i += 1)
+    // {
+    //     printf("%d ", puzzle.row[ i]);
+    // }// for i
+    // printf("\n");
+    // printf("col: ");
+    // for ( int i = 0; i < N; i += 1)
+    // {
+    //     printf("%d ", puzzle.col[ i]);
+    // }// for i
+    // printf("\n");
+    // printf("block: ");
+    // for ( int i = 0; i < N; i += 1)
+    // {
+    //     printf("%d ", puzzle.block[ i]);
+    // }// for i
+    // printf("\n");
     
     return;
 }
@@ -179,15 +169,182 @@ void pretty_print_sudoku( const sSudoku puzzle)
     return;
 }
 
+void init_stack( sSudoku_stack *stack)
+{
+    // stack stores the full puzzle
+    stack -> base = malloc( sizeof(sSudoku) * STACK_MAX);
+    stack -> len = 0;
+    return;
+}
+
+void free_stack( sSudoku_stack *stack)
+{
+    free( stack -> base);
+    stack -> base = NULL;
+    stack -> len = 0;
+    return;
+}
+
+int push_stack( sSudoku_stack *stack, const sSudoku *puzzle)
+{
+    if ( stack -> len == STACK_MAX)
+    {
+        // stack full
+        printf("stack full error %d\n", stack -> len);
+        return 1;
+    }// if
+
+    // max_used = max_used > stack_len? max_used: stack_len;    
+
+    memcpy( stack -> base + stack -> len, puzzle, sizeof(sSudoku));
+    stack -> len += 1;
+    
+    return 0;
+}
+
+int pop_stack( sSudoku_stack *stack, sSudoku *puzzle)
+{
+    if ( stack -> len == 0)
+    {
+        // stack full
+        printf("stack empty error %d\n", stack -> len);
+        return 1;
+    }// if
+
+    stack -> len -= 1;
+    memcpy( puzzle, stack -> base + stack -> len, sizeof(sSudoku));
+    return 0;
+}
+
+int16_t valids( sSudoku puzzle, int location)
+{
+    int16_t answer = 0;
+
+    answer = puzzle.row[ location / N]
+            | puzzle.col[ location % N]
+            | puzzle.block[( location / N) / SUB_N * SUB_N + ( location % N) / SUB_N];
+
+    answer = ~answer;
+    // printf("%d: possible %X\n", location, answer);
+    return answer;
+}
+
+void sudoku_set( sSudoku *puzzle, int location, int value)
+{
+    puzzle -> puzzle[ location] = '1' + value;
+
+    // update row, col, block
+    puzzle -> row[ location / N] = set( puzzle -> row[ location / N], value);
+    puzzle -> col[ location % N] = set( puzzle -> col[ location % N], value);
+    puzzle -> block[( location / N) / SUB_N * SUB_N + ( location % N) / SUB_N] = set( puzzle -> block[( location / N) / SUB_N * SUB_N + ( location % N) / SUB_N], value);
+
+    return;
+}
+
+void sudoku_unset( sSudoku *puzzle, int location)
+{
+    char value = puzzle -> puzzle[ location];
+    puzzle -> puzzle[ location] = '.';
+
+    // update row, col, block
+    puzzle -> row[ location / N] = unset( puzzle -> row[ location / N], value - '1');
+    puzzle -> col[ location % N] = unset( puzzle -> col[ location % N], value - '1');
+    puzzle -> block[( location / N) / SUB_N * SUB_N + ( location % N) / SUB_N] = unset( puzzle -> block[( location / N) / SUB_N * SUB_N + ( location % N) / SUB_N], value - '1');
+
+    return;
+}
+
+bool solve( sSudoku puzzle, sSudoku *sol)
+{
+    sSudoku local_puzzle;
+    sSudoku local_candidates[ N];
+    int cand_len;
+    bool has_answer = false;
+
+    while ( 1)
+    {
+        if ( global_stack.len == 0)
+        {
+            break;
+        }// if
+
+        pop_stack( &global_stack, &local_puzzle);
+
+        int16_t candidate;
+        int empty_pos = -1;
+        // find empty
+        for ( int i = 0; i < N * N; i += 1)
+        {
+            if ( local_puzzle.puzzle[ i] == '.')
+            {
+                empty_pos = i;
+                break;
+            }// if
+        }// for i
+        
+        // no empty spots
+        if ( empty_pos == -1)
+        {
+            has_answer = true;
+            memcpy( sol, &local_puzzle, sizeof(sSudoku));
+            break;
+        }// if
+
+        candidate = valids( local_puzzle, empty_pos);
+        cand_len = 0;
+        // printf("candidate %X\n", candidate);
+        for ( int i = 0; i < N; i += 1)
+        {
+            if ( candidate & 0x01)
+            {
+                // printf("guessing %d\n", i + 1);
+                // modify
+                sudoku_set( &local_puzzle, empty_pos, i);
+                // add
+                memcpy( &local_candidates[ cand_len], &local_puzzle, sizeof(sSudoku));
+                cand_len += 1;
+                // revert
+                sudoku_unset( &local_puzzle, empty_pos);
+            }// if
+            candidate = candidate >> 1;
+        }// for i
+
+        for ( int i = 0; i < cand_len; i += 1)
+        {
+            push_stack( &global_stack, &local_candidates[ i]);
+        }// for i
+    }// while
+    
+    return has_answer;
+}
+
 int main( void)
 {
     f_in = fopen("data/input_example", "r");
 
     sSudoku puzzle;
-    input( &puzzle);
+    sSudoku sol;
 
-    pretty_print_sudoku( puzzle);
-    print_sudoku( puzzle);
+    while ( input( &puzzle))
+    {
+        init_stack( &global_stack);
+        push_stack( &global_stack, &puzzle);
+
+        if ( solve( puzzle, &sol))
+        {
+            // pretty_print_sudoku( sol);
+            print_sudoku( puzzle);
+            printf(":1:");
+            print_sudoku( sol);
+            printf("\n");
+        }// if
+        else
+        {
+            printf("no answer\n");
+        }// else
+
+        free_stack( &global_stack);
+    }// while
 
     // cleanup
     fclose( f_in);
