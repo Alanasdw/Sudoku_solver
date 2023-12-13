@@ -164,6 +164,7 @@ bool solve( const int *puzzle, int *solution)
         if ( puzzle[ i] == 0)
         {
             target = i;
+            break;
         }// if
     }// for i
 
