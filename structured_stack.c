@@ -8,7 +8,7 @@
 #define N 9
 #define SUB_N 3
 #define STACK_MAX 100000000 /* 10**8 */
-#define THREAD_COUNT 2
+#define THREAD_COUNT 4
 
 typedef struct _sSudoku
 {
@@ -28,7 +28,7 @@ sSudoku_stack global_stack;
 pthread_mutex_t mux_global;
 pthread_mutex_t mux_waiter;
 pthread_cond_t cv_get;
-int wait_count, thread_computing;
+int wait_count;
 bool end;
 bool has_answer;
 sSudoku solution;
@@ -262,10 +262,28 @@ void sudoku_unset( sSudoku *puzzle, int location)
     return;
 }
 
+int get_stack_pop_num( sSudoku_stack *stack)
+{
+    if ( stack -> len == 0)
+    {
+        printf("stack empty get_pop error\n");
+        return -1;
+    }// if
+    
+    stack -> len -= 1;
+    return stack -> len;
+}
+
+void pop_stack_num( sSudoku_stack *stack, sSudoku *puzzle, int offset)
+{
+    memcpy( puzzle, stack -> base + offset, sizeof(sSudoku));
+    return;
+}
+
 void *solve( void *arg)
 {
     sSudoku local_puzzle;
-    sSudoku local_candidates[ N];
+    // sSudoku local_candidates[ N];
     int cand_len;
     sSudoku_stack local_stack;
     init_stack( &local_stack);
@@ -276,7 +294,8 @@ void *solve( void *arg)
         pthread_mutex_lock( &mux_global);
         if ( end)
         {
-            pthread_cond_signal( &cv_get);
+            // pthread_cond_signal( &cv_get);
+            // pthread_cond_broadcast( &cv_get);
             pthread_mutex_unlock( &mux_global);
             break;
         }// if
@@ -291,23 +310,25 @@ void *solve( void *arg)
 
             // get one from global stack
             pthread_mutex_lock( &mux_global);
-            while ( global_stack.len == 0)
+            while ( global_stack.len == 0 && end == false)
             {
-                if ( end)
-                {
-                    break;
-                }// if
                 pthread_cond_wait( &cv_get, &mux_global);
             }// while
             if ( end)
             {
-                pthread_cond_signal( &cv_get);
+                // pthread_cond_signal( &cv_get);
+                // pthread_cond_broadcast( &cv_get);
                 pthread_mutex_unlock( &mux_global);
                 break;
             }// if
             pop_stack( &global_stack, &local_puzzle);
+            // int offset = get_stack_pop_num( &global_stack);
+            // printf("got offset %d\n", offset);
+            pthread_cond_broadcast( &cv_get);
+            // pthread_cond_signal( &cv_get);
             pthread_mutex_unlock( &mux_global);
-
+            // pop_stack_num( &global_stack, &local_puzzle, offset);
+        
             // not waiting anymore
             pthread_mutex_lock( &mux_waiter);
             wait_count -= 1;
@@ -315,31 +336,49 @@ void *solve( void *arg)
 
             push_stack( &local_stack, &local_puzzle);
         }// if
+        else if ( local_stack.len > 1)
+        {
+            // check global waiter
+            bool push = false;
+            // pthread_mutex_lock( &mux_waiter);
+            push = wait_count > 0;
+            // pthread_mutex_unlock( &mux_waiter);
+
+            if ( push)
+            {
+                pop_stack( &local_stack, &local_puzzle);
+
+                pthread_mutex_lock( &mux_global);
+                push_stack( &global_stack, &local_puzzle);
+                pthread_cond_broadcast( &cv_get);
+                pthread_mutex_unlock( &mux_global);
+            }// if
+        }// if
 
         pop_stack( &local_stack, &local_puzzle);
 
         int16_t candidate;
         int empty_pos = -1;
-        // int possibles = 10;
-        // int16_t temp;
+        int possibles = 10;
+        int16_t temp;
         // find empty
         for ( int i = 0; i < N * N; i += 1)
         {
             if ( local_puzzle.puzzle[ i] == '.')
             {
-                // temp = __builtin_popcount( valids( local_puzzle, i) & 0x01ff);
-                // // printf("temp %d\n", temp);
-                // // printf("valids %X\n", valids( local_puzzle, i));
-                // if ( possibles > temp)
-                // {
-                //     // a better choice
-                //     possibles = temp;
-                //     empty_pos = i;
-                // }// if
+                temp = __builtin_popcount( valids( local_puzzle, i) & 0x01ff);
+                // printf("temp %d\n", temp);
+                // printf("valids %X\n", valids( local_puzzle, i));
+                if ( possibles > temp)
+                {
+                    // a better choice
+                    possibles = temp;
+                    empty_pos = i;
+                }// if
                 
                 // naive find
-                empty_pos = i;
-                break;
+                // empty_pos = i;
+                // break;
             }// if
         }// for i
 
@@ -350,7 +389,8 @@ void *solve( void *arg)
             has_answer = true;
             end = true;
             memcpy( &solution, &local_puzzle, sizeof(sSudoku));
-            pthread_cond_signal( &cv_get);
+            // pthread_cond_signal( &cv_get);
+            pthread_cond_broadcast( &cv_get);
             pthread_mutex_unlock( &mux_global);
             break;
         }// if
@@ -367,7 +407,8 @@ void *solve( void *arg)
                 // modify
                 sudoku_set( &local_puzzle, empty_pos, i);
                 // add
-                memcpy( &local_candidates[ cand_len], &local_puzzle, sizeof(sSudoku));
+                push_stack( &local_stack, &local_puzzle);
+                // memcpy( &local_candidates[ cand_len], &local_puzzle, sizeof(sSudoku));
                 cand_len += 1;
                 // revert
                 sudoku_unset( &local_puzzle, empty_pos);
@@ -375,25 +416,28 @@ void *solve( void *arg)
             candidate = candidate >> 1;
         }// for i
 
-        int i = 0;
-        // check global waiters
-        pthread_mutex_lock( &mux_waiter);
-        if ( wait_count != 0 && cand_len > 1)
-        {
-            pthread_mutex_lock( &mux_global);
+        // int i = 0;
+        // // check global waiters
+        // pthread_mutex_lock( &mux_waiter);
+        // if ( wait_count != 0 && cand_len > 1)
+        // {
+        //     pthread_mutex_lock( &mux_global);
+        //     // if ( global_stack.len == 0)
+        //     {
+        //         push_stack( &global_stack, &local_candidates[ i]);
 
-            push_stack( &global_stack, &local_candidates[ i]);
+        //         // pthread_cond_signal( &cv_get);
+        //         pthread_cond_broadcast( &cv_get);
+        //     }// if
+        //     pthread_mutex_unlock( &mux_global);
+        //     i += 1;
+        // }// if
+        // pthread_mutex_unlock( &mux_waiter);
 
-            pthread_cond_signal( &cv_get);
-            pthread_mutex_unlock( &mux_global);
-            i += 1;
-        }// if
-        pthread_mutex_unlock( &mux_waiter);
-
-        for ( ; i < cand_len; i += 1)
-        {
-            push_stack( &local_stack, &local_candidates[ i]);
-        }// for i
+        // for ( ; i < cand_len; i += 1)
+        // {
+        //     push_stack( &local_stack, &local_candidates[ i]);
+        // }// for i
         guess += cand_len;
     }// while
 
@@ -420,9 +464,9 @@ int main( void)
         guess = 0;
         has_answer = false;
         end = false;
+        wait_count = 0;
         init_stack( &global_stack);
         push_stack( &global_stack, &puzzle);
-        thread_computing = 0;
 
         for ( int i = 0; i < THREAD_COUNT; i += 1)
         {
@@ -432,8 +476,6 @@ int main( void)
                 return 1;
             }// if
         }// for i
-
-        pthread_cond_signal( &cv_get);
 
         for ( int i = 0; i < THREAD_COUNT; i += 1)
         {
@@ -459,7 +501,7 @@ int main( void)
         pthread_cond_destroy( &cv_get);
         pthread_mutex_destroy( &mux_global);
         pthread_mutex_destroy( &mux_waiter);
-        break;
+        // break;
     }// while
 
     // cleanup
