@@ -284,6 +284,7 @@ void *solve( void *arg)
 {
     sSudoku local_puzzle;
     // sSudoku local_candidates[ N];
+    int offset_local_stack = 0;
     int cand_len;
     sSudoku_stack local_stack;
     init_stack( &local_stack);
@@ -346,7 +347,12 @@ void *solve( void *arg)
 
             if ( push)
             {
-                pop_stack( &local_stack, &local_puzzle);
+                // pop_stack( &local_stack, &local_puzzle);
+
+                memcpy( &local_puzzle, &local_stack.base[ 0], sizeof(sSudoku));
+                offset_local_stack += 1;
+                local_stack.base += 1;
+                local_stack.len -= 1;
 
                 pthread_mutex_lock( &mux_global);
                 push_stack( &global_stack, &local_puzzle);
@@ -415,31 +421,10 @@ void *solve( void *arg)
             }// if
             candidate = candidate >> 1;
         }// for i
-
-        // int i = 0;
-        // // check global waiters
-        // pthread_mutex_lock( &mux_waiter);
-        // if ( wait_count != 0 && cand_len > 1)
-        // {
-        //     pthread_mutex_lock( &mux_global);
-        //     // if ( global_stack.len == 0)
-        //     {
-        //         push_stack( &global_stack, &local_candidates[ i]);
-
-        //         // pthread_cond_signal( &cv_get);
-        //         pthread_cond_broadcast( &cv_get);
-        //     }// if
-        //     pthread_mutex_unlock( &mux_global);
-        //     i += 1;
-        // }// if
-        // pthread_mutex_unlock( &mux_waiter);
-
-        // for ( ; i < cand_len; i += 1)
-        // {
-        //     push_stack( &local_stack, &local_candidates[ i]);
-        // }// for i
         guess += cand_len;
     }// while
+
+    local_stack.base -= offset_local_stack;
 
     free_stack( &local_stack);
     
