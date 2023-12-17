@@ -1,4 +1,4 @@
-#define _GNU_SOURCE     // for getline
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -49,14 +49,15 @@ inline int unset( int number, int offset)
 
 bool input( sSudoku *puzzle)
 {
-    size_t len = 0;
-    char *input = NULL;
+    size_t len = 200;
+    char input[ 200] = { 0};
     bool success = true;
 
     do
     {
         // if ( getline( &input, &len, stdin) == -1)
-        if ( getline( &input, &len, f_in) == -1)
+        // if ( getline( &input, &len, f_in) == -1)
+        if ( fgets( input, len, f_in) == NULL)
         {
             if ( !feof( f_in))
             {
@@ -106,8 +107,8 @@ bool input( sSudoku *puzzle)
         }// if
     } while ( input[ 0] == '#');
 
-    free( input);
-    input = NULL;
+    // free( input);
+    // input = NULL;
     return success;
 }
 
