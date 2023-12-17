@@ -8,7 +8,7 @@
 #define N 9
 #define SUB_N 3
 #define STACK_MAX 100000000 /* 10**8 */
-#define THREAD_COUNT 4
+#define THREAD_COUNT 2
 
 typedef struct _sSudoku
 {
@@ -27,8 +27,7 @@ typedef struct _sSudoku_stack
 sSudoku_stack global_stack;
 pthread_mutex_t mux_global;
 pthread_barrier_t barrier;
-int start_end[ 2 * THREAD_COUNT];
-bool end;
+volatile bool end;
 bool has_answer;
 sSudoku solution;
 FILE *f_in;
@@ -262,10 +261,10 @@ void sudoku_unset( sSudoku *puzzle, int location)
     return;
 }
 
-void stack_copy_range( sSudoku_stack source, sSudoku_stack *target, int start, int end)
+void stack_copy_range( sSudoku_stack source, sSudoku_stack *target, int start, int len)
 {
-    memcpy( target -> base,  source.base + start * sizeof(sSudoku), sizeof(sSudoku) * ( end - start));
-    
+    memcpy( target -> base,  source.base + start, sizeof(sSudoku) * len);
+    target -> len = len;
     return;
 }
 
@@ -282,17 +281,90 @@ void *solve( void *arg)
     if ( thread_id == 0)
     {
         // master generate and distribute them
-        pop_stack( &global_stack, &local_puzzle);
+        // expand the global_stack
+        while ( global_stack.len < THREAD_COUNT)
+        {
+            pop_stack( &global_stack, &local_puzzle);
+            int16_t candidate;
+            int empty_pos = -1;
+            int possibles = 10;
+            int16_t temp;
+            // find empty
+            for ( int i = 0; i < N * N; i += 1)
+            {
+                if ( local_puzzle.puzzle[ i] == '.')
+                {
+                    temp = __builtin_popcount( valids( local_puzzle, i) & 0x01ff);
+                    // printf("temp %d\n", temp);
+                    // printf("valids %X\n", valids( local_puzzle, i));
+                    if ( possibles > temp)
+                    {
+                        // a better choice
+                        possibles = temp;
+                        empty_pos = i;
+                    }// if
+                    
+                    // naive find
+                    // empty_pos = i;
+                    // break;
+                }// if
+            }// for i
 
-        push_stack( &global_stack, &local_puzzle);
+            // no empty spots
+            if ( empty_pos == -1)
+            {
+                pthread_mutex_lock( &mux_global);
+                has_answer = true;
+                end = true;
+                memcpy( &solution, &local_puzzle, sizeof(sSudoku));
+                // pthread_cond_signal( &cv_get);
+                pthread_mutex_unlock( &mux_global);
+                goto ret_first;
+            }// if
+            // printf("poss %d\n", possibles);
+
+            candidate = valids( local_puzzle, empty_pos);
+            cand_len = 0;
+            // printf("candidate %X\n", candidate);
+            for ( int i = 0; i < N; i += 1)
+            {
+                if ( candidate & 0x01)
+                {
+                    // printf("guessing %d\n", i + 1);
+                    // modify
+                    sudoku_set( &local_puzzle, empty_pos, i);
+                    // add
+                    push_stack( &global_stack, &local_puzzle);
+                    // memcpy( &local_candidates[ cand_len], &local_puzzle, sizeof(sSudoku));
+                    cand_len += 1;
+                    // revert
+                    sudoku_unset( &local_puzzle, empty_pos);
+                }// if
+                candidate = candidate >> 1;
+            }// for i
+            guess += cand_len;
+        }// while
     }// if
     
+ret_first:
+
     pthread_barrier_wait( &barrier);
+    if ( end)
+    {
+        goto ret_prep;
+    }// if
 
-    stack_copy_range( global_stack, &local_stack, start_end[ 2 * thread_id], start_end[ 2 * thread_id + 1]);
-
+    // calculate own start and len
+    int start = global_stack.len / THREAD_COUNT * thread_id;
+    start += (global_stack.len % THREAD_COUNT > thread_id) ? thread_id: global_stack.len % THREAD_COUNT;
+    start += (global_stack.len % THREAD_COUNT > thread_id) ? thread_id: global_stack.len % THREAD_COUNT;
+    int len = global_stack.len / THREAD_COUNT + (global_stack.len % THREAD_COUNT != 0);
+    
+    stack_copy_range( global_stack, &local_stack, start, len);//start_len[ 2 * thread_id], start_len[ 2 * thread_id + 1]);
+    // printf("%d: %d\n", thread_id, local_stack.len);
     while ( 1)
     {
+        // printf("%d: %d\n", thread_id, local_stack.len);
         if ( local_stack.len == 0 || end)
         {
             break;
@@ -360,6 +432,8 @@ void *solve( void *arg)
         guess += cand_len;
     }// while
 
+ret_prep:
+
     free_stack( &local_stack);
     
     pthread_exit( NULL);
@@ -367,9 +441,10 @@ void *solve( void *arg)
 
 int main( void)
 {
-    f_in = fopen("data/input_example", "r");
+    // f_in = fopen("data/input_example", "r");
     // f_in = fopen("data/ans2_17_clue", "r");
     // f_in = fopen("data/ans0_kaggle", "r");
+    f_in = fopen("data/ans5_forum_hardest_1905_11+", "r");
 
     sSudoku puzzle;
 
@@ -377,6 +452,7 @@ int main( void)
     {
         pthread_t threads[ THREAD_COUNT];
         int thread_nums[ THREAD_COUNT];
+        pthread_mutex_init( &mux_global, NULL);
         pthread_barrier_init( &barrier, NULL, THREAD_COUNT);
 
         guess = 0;
@@ -416,6 +492,7 @@ int main( void)
 
         free_stack( &global_stack);
         pthread_barrier_destroy( &barrier);
+        pthread_mutex_destroy( &mux_global);
         // break;
     }// while
 
