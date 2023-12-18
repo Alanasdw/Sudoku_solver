@@ -8,7 +8,7 @@
 #define N 9
 #define SUB_N 3
 #define STACK_MAX 100000000 /* 10**8 */
-#define THREAD_COUNT 2
+#define THREAD_COUNT 4
 
 typedef struct _sSudoku
 {
@@ -273,7 +273,6 @@ void *solve( void *arg)
     int thread_id = *(int *)arg;
 
     sSudoku local_puzzle;
-    // sSudoku local_candidates[ N];
     int cand_len;
     sSudoku_stack local_stack;
     init_stack( &local_stack);
@@ -355,13 +354,16 @@ ret_first:
     }// if
 
     // calculate own start and len
-    int start = global_stack.len / THREAD_COUNT * thread_id;
-    start += (global_stack.len % THREAD_COUNT > thread_id) ? thread_id: global_stack.len % THREAD_COUNT;
-    start += (global_stack.len % THREAD_COUNT > thread_id) ? thread_id: global_stack.len % THREAD_COUNT;
+    int start = 0;
     int len = global_stack.len / THREAD_COUNT + (global_stack.len % THREAD_COUNT != 0);
+    for ( int i = 1; i <= thread_id; i +=  1)
+    {
+        start += len;
+        len = global_stack.len / THREAD_COUNT + (global_stack.len % THREAD_COUNT > i);
+    }// for i
     
-    stack_copy_range( global_stack, &local_stack, start, len);//start_len[ 2 * thread_id], start_len[ 2 * thread_id + 1]);
-    // printf("%d: %d\n", thread_id, local_stack.len);
+    stack_copy_range( global_stack, &local_stack, start, len);
+    // printf("%d: start %d, len %d\n", thread_id, start, local_stack.len);
     while ( 1)
     {
         // printf("%d: %d\n", thread_id, local_stack.len);
@@ -404,7 +406,6 @@ ret_first:
             has_answer = true;
             end = true;
             memcpy( &solution, &local_puzzle, sizeof(sSudoku));
-            // pthread_cond_signal( &cv_get);
             pthread_mutex_unlock( &mux_global);
             break;
         }// if
@@ -422,7 +423,6 @@ ret_first:
                 sudoku_set( &local_puzzle, empty_pos, i);
                 // add
                 push_stack( &local_stack, &local_puzzle);
-                // memcpy( &local_candidates[ cand_len], &local_puzzle, sizeof(sSudoku));
                 cand_len += 1;
                 // revert
                 sudoku_unset( &local_puzzle, empty_pos);
@@ -442,9 +442,9 @@ ret_prep:
 int main( void)
 {
     // f_in = fopen("data/input_example", "r");
-    // f_in = fopen("data/ans2_17_clue", "r");
+    f_in = fopen("data/ans2_17_clue", "r");
     // f_in = fopen("data/ans0_kaggle", "r");
-    f_in = fopen("data/ans5_forum_hardest_1905_11+", "r");
+    // f_in = fopen("data/ans5_forum_hardest_1905_11+", "r");
 
     sSudoku puzzle;
 
