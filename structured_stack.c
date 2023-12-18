@@ -273,25 +273,26 @@ bool solve( sSudoku puzzle, sSudoku *sol)
 
         int16_t candidate;
         int empty_pos = -1;
-        // int possibles = 10;
-        // int16_t temp;
+        int possibles = 10;
+        int16_t temp;
         // find empty
         for ( int i = 0; i < N * N; i += 1)
         {
             if ( local_puzzle.puzzle[ i] == '.')
             {
-                // temp = __builtin_popcount( valids( local_puzzle, i) & 0x01ff);
-                // // printf("temp %d\n", temp);
-                // // printf("valids %X\n", valids( local_puzzle, i));
-                // if ( possibles > temp)
-                // {
-                //     // a better choice
-                //     possibles = temp;
-                //     empty_pos = i;
-                // }// if
+                temp = __builtin_popcount( valids( local_puzzle, i) & 0x01ff);
+                // printf("temp %d\n", temp);
+                // printf("valids %X\n", valids( local_puzzle, i));
+                if ( possibles > temp)
+                {
+                    // a better choice
+                    possibles = temp;
+                    empty_pos = i;
+                }// if
                 
-                empty_pos = i;
-                break;
+                // naive find
+                // empty_pos = i;
+                // break;
             }// if
         }// for i
 
