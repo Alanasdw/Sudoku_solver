@@ -8,7 +8,9 @@
 #define N 9
 #define SUB_N 3
 #define STACK_MAX 100000000 /* 10**8 */
-#define THREAD_COUNT 4
+// #define thread_count thread_count
+
+int thread_count = 1;
 
 typedef struct _sSudoku
 {
@@ -27,6 +29,7 @@ typedef struct _sSudoku_stack
 sSudoku_stack global_stack;
 pthread_mutex_t mux_global;
 pthread_cond_t cv_mux;
+pthread_barrier_t barrier;
 bool end;
 bool has_answer;
 sSudoku solution;
@@ -285,6 +288,8 @@ void *solve( void *arg)
     sSudoku local_candidates[ N];
     int cand_len;
 
+    pthread_barrier_wait( &barrier);
+
     while ( 1)
     {
         // check finished
@@ -292,17 +297,22 @@ void *solve( void *arg)
 
         while ( global_stack.len == 0)
         {
+            if ( end)
+            {
+                break;
+            }// if
             pthread_cond_wait( &cv_mux, &mux_global);
         }// while
 
         if ( end)
         {
             // pthread_cond_signal( &cv_get);
-            // pthread_cond_broadcast( &cv_get);
+            pthread_cond_broadcast( &cv_mux);
             pthread_mutex_unlock( &mux_global);
             break;
         }// if
         pop_stack( &global_stack, &local_puzzle);
+        pthread_cond_broadcast( &cv_mux);
         pthread_mutex_unlock( &mux_global);
 
         int16_t candidate;
@@ -337,7 +347,7 @@ void *solve( void *arg)
             has_answer = true;
             end = true;
             memcpy( &solution, &local_puzzle, sizeof(sSudoku));
-            // pthread_cond_signal( &cv_get);
+            pthread_cond_broadcast( &cv_mux);
             pthread_mutex_unlock( &mux_global);
             break;
         }// if
@@ -375,20 +385,23 @@ void *solve( void *arg)
     pthread_exit( NULL);
 }
 
-int main( void)
+int main( int argc, char *argv[])
 {
-    f_in = fopen("data/input_example", "r");
-    // f_in = fopen("data/ans2_17_clue", "r");
-    // f_in = fopen("data/ans0_kaggle", "r");
-    // f_in = fopen("data/ans5_forum_hardest_1905_11+", "r");
+    thread_count = atoi( argv[ 1]);
+
+    printf("thread: %d, %s]\n", thread_count, argv[ 2]);
+
+    f_in = fopen( argv[ 2], "r");
 
     sSudoku puzzle;
 
     while ( input( &puzzle))
     {
-        pthread_t threads[ THREAD_COUNT];
+        pthread_t threads[ thread_count];
         pthread_mutex_init( &mux_global, NULL);
         pthread_cond_init( &cv_mux, NULL);
+
+        pthread_barrier_init( &barrier, NULL, thread_count);
 
         guess = 0;
         has_answer = false;
@@ -396,7 +409,7 @@ int main( void)
         init_stack( &global_stack);
         push_stack( &global_stack, &puzzle);
 
-        for ( int i = 0; i < THREAD_COUNT; i += 1)
+        for ( int i = 0; i < thread_count; i += 1)
         {
             if ( pthread_create( &threads[ i], NULL, solve, NULL))
             {
@@ -405,7 +418,7 @@ int main( void)
             }// if
         }// for i
 
-        for ( int i = 0; i < THREAD_COUNT; i += 1)
+        for ( int i = 0; i < thread_count; i += 1)
         {
             pthread_join( threads[ i], NULL);
         }// for i
@@ -417,7 +430,7 @@ int main( void)
             printf(":1:");
             print_sudoku( solution);
             printf("\n");
-            printf("Total guesses: %d\n", guess);
+            printf("%d,\n", guess);
         }// if
         else
         {
@@ -426,6 +439,7 @@ int main( void)
 
         free_stack( &global_stack);
 
+        pthread_barrier_destroy( &barrier);
         pthread_cond_destroy( &cv_mux);
         pthread_mutex_destroy( &mux_global);
         // break;
