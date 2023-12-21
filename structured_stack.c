@@ -8,7 +8,9 @@
 #define N 9
 #define SUB_N 3
 #define STACK_MAX 100000000 /* 10**8 */
-#define THREAD_COUNT 4
+#define THREAD_COUNT thread_count
+
+int thread_count = 1;
 
 typedef struct _sSudoku
 {
@@ -265,6 +267,7 @@ void stack_copy_range( sSudoku_stack source, sSudoku_stack *target, int start, i
 {
     memcpy( target -> base,  source.base + start, sizeof(sSudoku) * len);
     target -> len = len;
+
     return;
 }
 
@@ -272,9 +275,9 @@ void *solve( void *arg)
 {
     int thread_id = *(int *)arg;
 
-    sSudoku local_puzzle;
-    int cand_len;
-    sSudoku_stack local_stack;
+    sSudoku local_puzzle = { 0};
+    int cand_len = 0;
+    sSudoku_stack local_stack = { 0};
     init_stack( &local_stack);
 
     if ( thread_id == 0)
@@ -344,9 +347,8 @@ void *solve( void *arg)
             guess += cand_len;
         }// while
     }// if
-    
-ret_first:
 
+ret_first:
     pthread_barrier_wait( &barrier);
     if ( end)
     {
@@ -429,7 +431,9 @@ ret_first:
             }// if
             candidate = candidate >> 1;
         }// for i
+        pthread_mutex_lock( &mux_global);
         guess += cand_len;
+        pthread_mutex_unlock( &mux_global);
     }// while
 
 ret_prep:
@@ -439,12 +443,10 @@ ret_prep:
     pthread_exit( NULL);
 }
 
-int main( void)
+int main( int argc, char *argv[])
 {
-    // f_in = fopen("data/input_example", "r");
-    f_in = fopen("data/ans2_17_clue", "r");
-    // f_in = fopen("data/ans0_kaggle", "r");
-    // f_in = fopen("data/ans5_forum_hardest_1905_11+", "r");
+    thread_count = atoi( argv[ 1]);
+    f_in = fopen( argv[ 2], "r");
 
     sSudoku puzzle;
 
@@ -483,7 +485,7 @@ int main( void)
             printf(":1:");
             print_sudoku( solution);
             printf("\n");
-            printf("Total guesses: %d\n", guess);
+            printf("%d,\n", guess);
         }// if
         else
         {
