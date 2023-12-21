@@ -17,7 +17,7 @@ do
     mkdir $data_output_dir/$i
     for input in $files
     do
-        echo ${thread_count[$i]} $data_input_dir/$input $data_output_dir/$i\_$input
+        echo ${thread_count[$i]} $data_input_dir/$input $data_output_dir/$i/$input
         # touch $data_output_dir/$i/$input
         ./$exec ${thread_count[$i]} $data_input_dir/$input > $data_output_dir/$i/$input
         cat $data_output_dir/$i/$input | grep , > $data_output_dir/$i/$input\_guesses.csv
