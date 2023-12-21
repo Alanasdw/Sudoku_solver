@@ -377,9 +377,9 @@ void *solve( void *arg)
         {
             push_stack( &global_stack, &local_candidates[ i]);
         }// for i
+        // guess += cand_len;
         pthread_cond_broadcast( &cv_mux);
         pthread_mutex_unlock( &mux_global);
-        guess += cand_len;
     }// while
     
     pthread_exit( NULL);
@@ -388,9 +388,6 @@ void *solve( void *arg)
 int main( int argc, char *argv[])
 {
     thread_count = atoi( argv[ 1]);
-
-    printf("thread: %d, %s]\n", thread_count, argv[ 2]);
-
     f_in = fopen( argv[ 2], "r");
 
     sSudoku puzzle;
@@ -430,7 +427,7 @@ int main( int argc, char *argv[])
             printf(":1:");
             print_sudoku( solution);
             printf("\n");
-            printf("%d,\n", guess);
+            // printf("%d,\n", guess);
         }// if
         else
         {
