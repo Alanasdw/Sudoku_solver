@@ -502,12 +502,12 @@ bool omp_solver ( sSudoku puzzle, sSudoku *sol, int num_threads) {
 int main( void)
 {
     // f_in = fopen("data/input_example", "r");
-    f_in = fopen("data/ans0_kaggle", "r"); // 8 threads 2.1 sec
-    // f_in = fopen("data/ans2_17_clue", "r"); // 8 threads 409 sec
+    // f_in = fopen("data/ans0_kaggle", "r"); // 8 threads 2.1 sec
+    f_in = fopen("data/ans2_17_clue", "r"); // 8 threads 409 sec
     // f_in = fopen("data/ans5_forum_hardest_1905_11+", "r"); // 8 threads 66 sec
 
     // get num threads
-    int num_threads = 4;
+    int num_threads = 8;
     // int num_threads = omp_get_max_threads() / 2;
     printf("num_threads = %d\n", num_threads);
     omp_set_num_threads( num_threads);
@@ -526,10 +526,10 @@ int main( void)
         if ( omp_solver( puzzle, &sol, num_threads))
         {
             // pretty_print_sudoku( sol);
-            // print_sudoku( puzzle);
-            // printf(":1:");
-            // print_sudoku( sol);
-            // printf("\n");
+            print_sudoku( puzzle);
+            printf(":1:");
+            print_sudoku( sol);
+            printf("\n");
             // printf("Total guesses: %d\n", guess);
         }// if
         else
