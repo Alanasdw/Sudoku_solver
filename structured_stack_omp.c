@@ -499,15 +499,16 @@ bool omp_solver ( sSudoku puzzle, sSudoku *sol, int num_threads) {
     return solved;
 }
 
-int main( void)
+int main( int argc, char *argv[])
 {
     // f_in = fopen("data/input_example", "r");
     // f_in = fopen("data/ans0_kaggle", "r"); // 8 threads 2.1 sec
-    f_in = fopen("data/ans2_17_clue", "r"); // 8 threads 409 sec
+    // f_in = fopen("data/ans2_17_clue", "r"); // 8 threads 409 sec
     // f_in = fopen("data/ans5_forum_hardest_1905_11+", "r"); // 8 threads 66 sec
+    f_in = fopen( argv[ 2], "r");
 
     // get num threads
-    int num_threads = 8;
+    int num_threads = atoi( argv[ 1]);
     // int num_threads = omp_get_max_threads() / 2;
     printf("num_threads = %d\n", num_threads);
     omp_set_num_threads( num_threads);
