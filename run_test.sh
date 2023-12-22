@@ -19,7 +19,7 @@ do
     do
         echo ${thread_count[$i]} $data_input_dir/$input $data_output_dir/$i/$input
         # touch $data_output_dir/$i/$input
-        ./$exec ${thread_count[$i]} $data_input_dir/$input > $data_output_dir/$i/$input
+        time ./$exec ${thread_count[$i]} $data_input_dir/$input > $data_output_dir/$i/$input
         cat $data_output_dir/$i/$input | grep , > $data_output_dir/$i/$input\_guesses.csv
     done
 done

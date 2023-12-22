@@ -344,7 +344,7 @@ void *solve( void *arg)
                 }// if
                 candidate = candidate >> 1;
             }// for i
-            guess += cand_len;
+            // guess += cand_len;
         }// while
     }// if
 
@@ -431,9 +431,9 @@ ret_first:
             }// if
             candidate = candidate >> 1;
         }// for i
-        pthread_mutex_lock( &mux_global);
-        guess += cand_len;
-        pthread_mutex_unlock( &mux_global);
+        // pthread_mutex_lock( &mux_global);
+        // guess += cand_len;
+        // pthread_mutex_unlock( &mux_global);
     }// while
 
 ret_prep:
@@ -485,7 +485,7 @@ int main( int argc, char *argv[])
             printf(":1:");
             print_sudoku( solution);
             printf("\n");
-            printf("%d,\n", guess);
+            // printf("%d,\n", guess);
         }// if
         else
         {
