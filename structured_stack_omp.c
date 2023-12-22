@@ -476,7 +476,7 @@ bool omp_solver ( sSudoku puzzle, sSudoku *sol, int num_threads) {
             push_stack( &global_stack, &local_candidates[ i]);
         }// for i
         // printf("cand_len %d\n", cand_len);
-        guess += cand_len;
+        // guess += cand_len;
         num_branches += cand_len - 1; // every round minus 1 
     }// while
     sSudoku_stack local_stacks[num_branches];
@@ -516,7 +516,7 @@ int main( int argc, char *argv[])
     sSudoku puzzle;
     sSudoku sol;
 
-    double time_start = clock();
+    // double time_start = clock();
     while ( input( &puzzle))
     {
         guess = 0;
@@ -541,7 +541,7 @@ int main( int argc, char *argv[])
         free_stack( &global_stack);
         // break;
     }// while
-    printf("Total running time: %.5lf sec\n", ( clock() - time_start ) / CLOCKS_PER_SEC);
+    // printf("Total running time: %.5lf sec\n", ( clock() - time_start ) / CLOCKS_PER_SEC);
 
     // cleanup
     fclose( f_in);
