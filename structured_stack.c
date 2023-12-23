@@ -7,7 +7,7 @@
 
 #define N 9
 #define SUB_N 3
-#define STACK_MAX 100000000 /* 10**8 */
+#define STACK_MAX 100000 /* 10**5 */
 #define THREAD_COUNT thread_count
 
 int thread_count = 1;
@@ -181,7 +181,8 @@ void pretty_print_sudoku( const sSudoku puzzle)
 void init_stack( sSudoku_stack *stack)
 {
     // stack stores the full puzzle
-    stack -> base = malloc( sizeof(sSudoku) * STACK_MAX);
+    // stack -> base = malloc( sizeof(sSudoku) * STACK_MAX);
+    stack -> base = aligned_alloc( 64, sizeof(sSudoku) * STACK_MAX);
     stack -> len = 0;
     return;
 }
@@ -259,14 +260,6 @@ void sudoku_unset( sSudoku *puzzle, int location)
     puzzle -> row[ location / N] = unset( puzzle -> row[ location / N], value - '1');
     puzzle -> col[ location % N] = unset( puzzle -> col[ location % N], value - '1');
     puzzle -> block[( location / N) / SUB_N * SUB_N + ( location % N) / SUB_N] = unset( puzzle -> block[( location / N) / SUB_N * SUB_N + ( location % N) / SUB_N], value - '1');
-
-    return;
-}
-
-void stack_copy_range( sSudoku_stack source, sSudoku_stack *target, int start, int len)
-{
-    memcpy( target -> base,  source.base + start, sizeof(sSudoku) * len);
-    target -> len = len;
 
     return;
 }
@@ -363,9 +356,12 @@ ret_first:
         start += len;
         len = global_stack.len / THREAD_COUNT + (global_stack.len % THREAD_COUNT > i);
     }// for i
+
+    for ( int i = 0; i < len; i += 1)
+    {
+        push_stack( &local_stack, global_stack.base + start + i);
+    }// for i
     
-    stack_copy_range( global_stack, &local_stack, start, len);
-    // printf("%d: start %d, len %d\n", thread_id, start, local_stack.len);
     while ( 1)
     {
         // printf("%d: %d\n", thread_id, local_stack.len);
