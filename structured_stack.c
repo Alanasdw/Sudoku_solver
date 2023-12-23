@@ -334,10 +334,10 @@ bool solve( sSudoku puzzle, sSudoku *sol)
     return has_answer;
 }
 
-int main( void)
+int main( int argc, char *argv[])
 {
-    f_in = fopen("data/input_example", "r");
-    // f_in = fopen("data/ans2_17_clue", "r");
+    // f_in = fopen("data/input_example", "r");
+    f_in = fopen( argv[1], "r");
     // f_in = fopen("data/ans0_kaggle", "r");
 
     sSudoku puzzle;
@@ -356,7 +356,7 @@ int main( void)
             printf(":1:");
             print_sudoku( sol);
             printf("\n");
-            printf("Total guesses: %d\n", guess);
+            printf("%d,\n", guess);
         }// if
         else
         {
