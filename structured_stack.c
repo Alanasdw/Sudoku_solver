@@ -181,8 +181,8 @@ void pretty_print_sudoku( const sSudoku puzzle)
 void init_stack( sSudoku_stack *stack)
 {
     // stack stores the full puzzle
-    // stack -> base = malloc( sizeof(sSudoku) * STACK_MAX);
-    stack -> base = aligned_alloc( 64, sizeof(sSudoku) * STACK_MAX);
+    stack -> base = malloc( sizeof(sSudoku) * STACK_MAX);
+    // stack -> base = aligned_alloc( 64, sizeof(sSudoku) * STACK_MAX);
     stack -> len = 0;
     return;
 }
