@@ -3,12 +3,12 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>    // for bool
-#include <pthread.h>    // for multi threading
+// #include <pthread.h>    // for multi threading
 
 #define N 9
 #define SUB_N 3
 #define STACK_MAX 100000 /* 10**5 */
-#define THREAD_COUNT 4
+// #define THREAD_COUNT 4
 
 typedef struct _sSudoku
 {
