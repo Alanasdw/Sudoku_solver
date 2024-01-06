@@ -3,7 +3,7 @@
 CC = gcc
 CFLAGS = -Wall -g -O3 -march=native -fopenmp
 
-SOURCE = structured_stack_omp.c # naive.c naive_stack.c structured_stack.c
+SOURCE = structured_stack_omp.c
 TARGET = $(SOURCE:.c=)
 
 all: $(TARGET)
